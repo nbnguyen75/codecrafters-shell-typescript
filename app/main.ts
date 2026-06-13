@@ -1,6 +1,7 @@
 import path from "node:path";
 import { existsSync, constants, accessSync } from "node:fs";
 import { createInterface } from "node:readline";
+import { exec } from "node:child_process";
 
 const commands = ['exit', 'echo', 'type']
 
@@ -56,8 +57,21 @@ rl.on('line', (command) => {
         console.log(`${givenCommand}: not found`)
     }
   }
-  else
-    console.log(`${command}: command not found`)
+  else {
+    const [exeFile, ...args] = command.trim().split(/\s+/)
+    const exePath = findCommandInDirs(exeFile);
+    if (!exePath)
+      console.log(`${command}: command not found`)
+    else {
+      console.log(`Program was passed ${args.length + 1} args (including program name).`);
+      console.log(`Arg #0 (program name): ${exeFile}`);
+      for (let index = 0; index < args.length; index++) {
+        const element = args[index];
+        console.log(`Arg #${index + 1}: ${element}`)
+      }
+      exec(command)
+    }
+  }
 
   rl.prompt()
 })
