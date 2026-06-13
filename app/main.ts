@@ -60,17 +60,23 @@ rl.on('line', (command) => {
   else {
     const [exeFile, ...args] = command.trim().split(/\s+/)
     const exePath = findCommandInDirs(exeFile);
+    
     if (!exePath)
       console.log(`${command}: command not found`)
     else {
-      // console.log(`Program was passed ${args.length + 1} args (including program name).`);
-      // console.log(`Arg #0 (program name): ${exeFile}`);
-      // for (let index = 0; index < args.length; index++) {
-      //   const element = args[index];
-      //   console.log(`Arg #${index + 1}: ${element}`)
-      // }
-      const { stdout } = exec(command)
-      console.log(stdout)
+      exec(command, (err, stdout, stderr) => {
+        if (err) {
+          console.error(`Execution Error: ${err.message}`);
+          return;
+        }
+        
+        if (stderr) {
+          console.error(`Stderr: ${stderr}`);
+          return;
+        }
+
+        console.log(stdout);
+      })
     }
   }
 
