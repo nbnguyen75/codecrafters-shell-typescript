@@ -75,6 +75,7 @@ rl.on('line', (command) => {
     else {
       try {
         execSync(command, { stdio: 'inherit' });
+        rl.prompt()
       } catch (err) {
         const error = err as Error;
         console.error('The command failed to execute:', error.message);
