@@ -1,6 +1,29 @@
-import { createInterface } from "readline";
+import path from "node:path";
+import { existsSync, constants, accessSync } from "node:fs";
+import { createInterface } from "node:readline";
 
 const commands = ['exit', 'echo', 'type']
+
+const processPaths = (process.env.PATH || "").split(path.delimiter)
+
+function findCommandInDirs(command: string) {
+  let foundPath = undefined;
+  for (const processPath of processPaths) {
+    if (!existsSync(processPath))
+      continue
+
+    const fullPath = path.join(processPath, command);
+
+    try {
+      accessSync(fullPath, constants.X_OK);
+      foundPath = fullPath;
+    } catch {
+      continue
+    }
+  }
+
+  return foundPath;
+}
 
 const rl = createInterface({
   input: process.stdin,
@@ -25,7 +48,13 @@ rl.on('line', (command) => {
     if (commands.includes(givenCommand))
       console.log(`${givenCommand} is a shell builtin`)
     else 
-      console.log(`${givenCommand}: not found`)
+    {
+      const commandPath = findCommandInDirs(givenCommand);
+      if (commandPath)
+        console.log(`${givenCommand} is ${commandPath}`)
+      else
+        console.log(`${givenCommand}: not found`)
+    }
   }
   else
     console.log(`${command}: command not found`)
