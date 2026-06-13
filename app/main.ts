@@ -1,29 +1,71 @@
 import path from "node:path";
 import { existsSync, constants, accessSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { execSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 
-const commands = ['exit', 'echo', 'type']
+const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter)
 
-const processPaths = (process.env.PATH || "").split(path.delimiter)
+function findExternalCommand(command: string) {
 
-function findCommandInDirs(command: string) {
-  let foundPath = undefined;
-  for (const processPath of processPaths) {
-    if (!existsSync(processPath))
-      continue
+  for (const dir of PATH_DIRECTORIES) {
+    if (!existsSync(dir)) continue;
 
-    const fullPath = path.join(processPath, command);
-
+    const fullPath = path.join(dir, command);
     try {
       accessSync(fullPath, constants.X_OK);
-      foundPath = fullPath;
+      return fullPath;
     } catch {
-      continue
+      continue;
     }
   }
+  
+  return null;
+}
 
-  return foundPath;
+type CommandHandler = (args: string[], rawLine: string) => void;
+
+const builtins: Record<string, CommandHandler> = {
+  exit: () => {
+    rl.close();
+    process.exit(0);
+  },
+  echo: (args, rawLine) => {
+    console.log(rawLine.slice(5).trim())
+  },
+  type: (args) => {
+    const targetCommand = args[0];
+
+    if (!targetCommand) {
+      return;
+    }
+
+    if (targetCommand in builtins) {
+      console.log(`${targetCommand} is a shell builtin`)
+    }
+
+    const commandPath = findExternalCommand(targetCommand)
+
+    if (commandPath)
+      console.log(`${targetCommand} is ${commandPath}`)
+    else
+      console.log(`${targetCommand}: not found`)
+  }
+}
+
+function handleExternalCommand(command: string, args: string[] = []) {
+  const exePath = findExternalCommand(command);
+
+  if (!exePath) {
+    console.log(`${command}: command not found`)
+    return
+  }
+  
+  try {
+    spawnSync(command, args, { stdio: 'inherit' });
+  } catch (err) {
+    const error = err as Error;
+    console.error('The command failed to execute:', error.message);
+  }
 }
 
 const rl = createInterface({
@@ -32,54 +74,23 @@ const rl = createInterface({
   prompt: "$ ",
 });
 
-// TODO: Uncomment the code below to pass the first stage
 rl.prompt();
 
-rl.on('line', (command) => {
-  if (command.startsWith('exit'))
-  {
-    rl.close();
-    return process.exit(0);
+rl.on('line', (line) => {
+  const trimmedLine = line.trim();
+
+  if (!trimmedLine) {
+    rl.prompt();
+    return;
   }
 
-  if (command.startsWith('echo '))
-  {
-    console.log(command.slice(5))
+  const [command, ...args] = trimmedLine.split(/\s+/);
 
-    rl.prompt()
+  if (command in builtins) {
+    builtins[command](args, line);
+  } else {
+    handleExternalCommand(command, args);
   }
-  else if (command.startsWith('type '))
-  {
-    const givenCommand = command.slice(5).trim()
-    if (commands.includes(givenCommand))
-      console.log(`${givenCommand} is a shell builtin`)
-    else 
-    {
-      const commandPath = findCommandInDirs(givenCommand);
-      if (commandPath)
-        console.log(`${givenCommand} is ${commandPath}`)
-      else
-        console.log(`${givenCommand}: not found`)
-    }
 
-    rl.prompt()
-  }
-  else {
-    const [exeFile] = command.trim().split(/\s+/)
-    const exePath = findCommandInDirs(exeFile);
-
-    if (!exePath) {
-      console.log(`${command}: command not found`)
-      rl.prompt()
-    }
-    else {
-      try {
-        execSync(command, { stdio: 'inherit' });
-        rl.prompt()
-      } catch (err) {
-        const error = err as Error;
-        console.error('The command failed to execute:', error.message);
-      }
-    }
-  }
+  rl.prompt();
 })
