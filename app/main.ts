@@ -41,7 +41,8 @@ rl.on('line', (command) => {
     rl.close();
     return process.exit(0);
   }
-  else if (command.startsWith('echo '))
+
+  if (command.startsWith('echo '))
     console.log(command.slice(5))
   else if (command.startsWith('type '))
   {
@@ -58,9 +59,9 @@ rl.on('line', (command) => {
     }
   }
   else {
-    const [exeFile, ...args] = command.trim().split(/\s+/)
+    const [exeFile] = command.trim().split(/\s+/)
     const exePath = findCommandInDirs(exeFile);
-    
+
     if (!exePath)
       console.log(`${command}: command not found`)
     else {
@@ -80,5 +81,5 @@ rl.on('line', (command) => {
     }
   }
 
-  rl.prompt()
+  // rl.prompt()
 })
