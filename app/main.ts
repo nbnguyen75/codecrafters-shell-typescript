@@ -74,7 +74,7 @@ rl.on('line', (command) => {
     }
     else {
       try {
-        execSync('custom_exe_1234 alice', { stdio: 'inherit' });
+        execSync(command, { stdio: 'inherit' });
       } catch (err) {
         const error = err as Error;
         console.error('The command failed to execute:', error.message);
