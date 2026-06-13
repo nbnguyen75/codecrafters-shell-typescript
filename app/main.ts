@@ -1,7 +1,7 @@
 import path from "node:path";
 import { existsSync, constants, accessSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { exec } from "node:child_process";
+import { execSync } from "node:child_process";
 
 const commands = ['exit', 'echo', 'type']
 
@@ -73,20 +73,12 @@ rl.on('line', (command) => {
       rl.prompt()
     }
     else {
-      exec(command, (err, stdout, stderr) => {
-        if (err) {
-          console.error(`Execution Error: ${err.message}`);
-          return;
-        }
-        
-        if (stderr) {
-          console.error(`Stderr: ${stderr}`);
-          return;
-        }
-
-        console.log(stdout);
-        rl.prompt()
-      })
+      try {
+        execSync('custom_exe_1234 alice', { stdio: 'inherit' });
+      } catch (err) {
+        const error = err as Error;
+        console.error('The command failed to execute:', error.message);
+      }
     }
   }
 })
