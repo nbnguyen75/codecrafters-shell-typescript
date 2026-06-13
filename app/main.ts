@@ -41,6 +41,7 @@ const builtins: Record<string, CommandHandler> = {
 
     if (targetCommand in builtins) {
       console.log(`${targetCommand} is a shell builtin`)
+      return;
     }
 
     const commandPath = findExternalCommand(targetCommand)
@@ -51,7 +52,7 @@ const builtins: Record<string, CommandHandler> = {
       console.log(`${targetCommand}: not found`)
   },
   pwd: () => {
-    spawnSync('pwd', { stdio: 'inherit' });
+    execSync('pwd', { stdio: 'inherit' });
   }
 }
 
