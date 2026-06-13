@@ -49,6 +49,9 @@ const builtins: Record<string, CommandHandler> = {
       console.log(`${targetCommand} is ${commandPath}`)
     else
       console.log(`${targetCommand}: not found`)
+  },
+  pwd: () => {
+    spawnSync('pwd', { stdio: 'inherit' });
   }
 }
 
