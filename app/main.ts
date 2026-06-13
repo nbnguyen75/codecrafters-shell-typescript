@@ -85,6 +85,7 @@ rl.on('line', (command) => {
         }
 
         console.log(stdout);
+        rl.prompt()
       })
     }
   }
