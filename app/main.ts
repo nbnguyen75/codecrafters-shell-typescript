@@ -11,10 +11,15 @@ const rl = createInterface({
 rl.prompt();
 
 rl.on('line', (command) => {
-  if (command === "exit")
-    exit(0);
-  
-  console.log(`${command}: command not found`)
+  if (command.startsWith('exit'))
+  {
+    rl.close();
+    return;
+  }
+  else if (command.startsWith('echo '))
+    console.log(command.slice(5))
+  else
+    console.log(`${command}: command not found`)
 
   rl.prompt()
 })
