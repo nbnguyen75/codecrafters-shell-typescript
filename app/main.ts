@@ -1,7 +1,8 @@
 import path from "node:path";
+import { homedir } from "node:os";
 import { existsSync, constants, accessSync } from "node:fs";
 import { createInterface } from "node:readline";
-import { execSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter)
 
@@ -56,7 +57,10 @@ const builtins: Record<string, CommandHandler> = {
    console.log(process.cwd())
   },
   cd: (args) => {
-   existsSync(args[0]) ? process.chdir(args[0]) : console.log(`cd: ${args[0]}: No such file or directory`)
+   if (args[0] === "~")
+      return process.chdir(homedir())
+
+   return existsSync(args[0]) ? process.chdir(args[0]) : console.log(`cd: ${args[0]}: No such file or directory`)
   }
 }
 
