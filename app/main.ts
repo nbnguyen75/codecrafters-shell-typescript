@@ -52,7 +52,11 @@ const builtins: Record<string, CommandHandler> = {
       console.log(`${targetCommand}: not found`)
   },
   pwd: () => {
-    execSync('pwd', { stdio: 'inherit' });
+   //  execSync('pwd', { stdio: 'inherit' });
+   console.log(process.cwd())
+  },
+  cd: (args) => {
+   existsSync(args[0]) ? process.chdir(args[0]) : console.log(`cd: ${args[0]}: No such file or directory`)
   }
 }
 
