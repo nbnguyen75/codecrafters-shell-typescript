@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { existsSync, constants, accessSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { spawnSync } from "node:child_process";
+import { parse } from "./parse.js";
 
 const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter)
 
@@ -30,8 +31,8 @@ const builtins: Record<string, CommandHandler> = {
     rl.close();
     process.exit(0);
   },
-  echo: (args, rawLine) => {
-    console.log(rawLine.slice(5).trim())
+  echo: (args) => {
+    console.log(args.join(' '))
   },
   type: (args) => {
     const targetCommand = args[0];
@@ -96,7 +97,7 @@ rl.on('line', (line) => {
     return;
   }
 
-  const [command, ...args] = trimmedLine.split(/\s+/);
+  const [command, ...args] = parse(trimmedLine);
 
   if (command in builtins) {
     builtins[command](args, line);
