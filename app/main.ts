@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { existsSync, constants, accessSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { spawnSync } from "node:child_process";
-import { parse } from "./parse.js";
+import { parse } from "./parser.js";
 
 const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter)
 
