@@ -133,7 +133,7 @@ rl.on('line', (line) => {
    if (command in builtins) {
       builtins[command](args, outputRedir);
    } else {
-      handleExternalCommand(command, args);
+      handleExternalCommand(command, args, outputRedir);
    }
 
    rl.prompt();
