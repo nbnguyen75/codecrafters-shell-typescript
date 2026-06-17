@@ -97,7 +97,7 @@ function handleExternalCommand(command: string, args: string[] = [], outputRedir
          stdio[1] = found
       }
 
-      spawnSync(command, args, { stdio });
+      spawnSync(command, args, { stdio, shell: true, encoding: 'utf-8' });
    } catch (err) {
       const error = err as Error;
       console.error('The command failed to execute:', error.message);
