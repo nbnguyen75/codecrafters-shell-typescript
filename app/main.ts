@@ -71,7 +71,7 @@ function writeError(content: string, redirect: RedirectOutput) {
 
 const REDIRECT_RE = /^(>>?|1>>?|2>>?)$/;
 
-function extractRedirection(args: string[]): { cleanArgs: string[], redirect: RedirectOutput } {
+function extractRedirection(args: string[]) {
    const redirect: RedirectOutput = { file: null, type: null, append: false };
    const cleanArgs = [...args];
 
