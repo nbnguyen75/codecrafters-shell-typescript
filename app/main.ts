@@ -159,7 +159,7 @@ rl.on('line', (line) => {
    } else if (errorRedirIndex !== -1) {
       redirectOutput.file = args[errorRedirIndex + 1];
       redirectOutput.type = "stderr";
-      args.splice(outputRedirIndex, 2);
+      args.splice(errorRedirIndex, 2);
    }
 
    if (command in builtins) {
