@@ -41,26 +41,31 @@ function findExternalCommand(command: string) {
    return null;
 }
 
-function writeOutput(content: string, redirect: RedirectOutput) {
+function createFile(filePath: string) {
+   closeSync(openSync(filePath, 'w'));
+}
+
+function writeToStream(content: string, stream: StandardStream, redirect: RedirectOutput) {
    const { file: filePath, type: stdType } = redirect;
 
-   if (stdType === "stdout" && filePath) {
-      appendFileSync(filePath, content + '\n')
-      return
+   if (stdType === stream && filePath) {
+      appendFileSync(filePath, content + '\n');
+      return;
    }
 
-   console.log(content);
+   if (stream === 'stdout') {
+      console.log(content);
+   } else {
+      console.error(content);
+   }
+}
+
+function writeOutput(content: string, redirect: RedirectOutput) {
+   writeToStream(content, 'stdout', redirect);
 }
 
 function writeError(content: string, redirect: RedirectOutput) {
-   const { file: filePath, type: stdType } = redirect;
-
-   if (stdType === "stderr" && filePath) {
-      appendFileSync(filePath, content + '\n')
-      return
-   }
-
-   console.error(content);
+   writeToStream(content, 'stderr', redirect);
 }
 
 function extractRedirection(args: string[]): { cleanArgs: string[], redirect: RedirectOutput } {
@@ -142,24 +147,24 @@ function executeExternalCommand(command: string, args: string[] = [], redirect: 
       return
    }
 
-   let fd: number | null = null; // Tạo biến để giữ File Descriptor
+   let fd: number | null = null;
 
    try {
       const stdio: StdioOptions = ['inherit', 'inherit', 'inherit'];
 
       if (redirect.file) {
-         fd = openSync(redirect.file, 'w')
+         fd = openSync(redirect.file, 'w');
 
-         if (redirect.type === "stdout")
+         if (redirect.type === "stdout") {
             stdio[1] = fd;
-         else if (redirect.type === "stderr")
-            stdio[2] = fd
+         } else if (redirect.type === "stderr") {
+            stdio[2] = fd;
+         }
       }
 
       spawnSync(command, args, { stdio });
-   } catch (err) {
-      const error = err as Error;
-      console.error('The command failed to execute:', error.message);
+   } catch {
+      console.error('The command failed to execute');
    } finally {
       if (fd !== null) {
          closeSync(fd);
@@ -194,9 +199,7 @@ rl.on('line', (line) => {
    const { cleanArgs: args, redirect } = extractRedirection(rawArgs);
 
    if (command in builtins) {
-      if (redirect.file) {
-         closeSync(openSync(redirect.file, 'w'));
-      }
+      if (redirect.file) createFile(redirect.file);
       builtins[command](args, redirect);
    } else {
       executeExternalCommand(command, args, redirect);
