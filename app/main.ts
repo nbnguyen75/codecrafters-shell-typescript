@@ -166,6 +166,10 @@ rl.on('line', (line) => {
       args.splice(errorRedirIndex, 2);
    }
 
+   if (redirectOutput.file) {
+      closeSync(openSync(redirectOutput.file, 'w'));
+   }
+
    if (command in builtins) {
       builtins[command](args, redirectOutput);
    } else {
