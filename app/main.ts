@@ -190,6 +190,10 @@ const rl = createInterface({
    completer: (line: string): [string[], string] => {
       const firstWord = line.trim().split(/\s+/)[0] || "";
       const matches = commandTrie.findWordsWithPrefix(firstWord);
+
+      if (!matches.length)
+         return [['\x07'], firstWord];
+
       return [matches.map(cmd => cmd + " "), firstWord];
    },
 });
