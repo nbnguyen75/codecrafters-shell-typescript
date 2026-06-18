@@ -29,25 +29,23 @@ function findExternalCommand(command: string) {
 function writeOutput(content: string, redirectOutput: RedirectOutput) {
    const { file: filePath, type: stdType } = redirectOutput;
 
-   if (!filePath) {
-      console.log(content);
+   if (stdType === "stdout" && filePath) {
+      appendFileSync(filePath, content + '\n')
       return
    }
 
-   if (stdType === "stdout")
-      appendFileSync(filePath, content + '\n')
+   console.log(content);
 }
 
 function writeError(content: string, redirectOutput: RedirectOutput) {
    const { file: filePath, type: stdType } = redirectOutput;
 
-   if (!filePath) {
-      console.error(content);
+   if (stdType === "stderr" && filePath) {
+      appendFileSync(filePath, content + '\n')
       return
    }
 
-   if (stdType === "stderr")
-      appendFileSync(filePath, content + '\n')
+   console.error(content);
 }
 
 type CommandHandler = (args: string[], redirectOutput: RedirectOutput) => void;
