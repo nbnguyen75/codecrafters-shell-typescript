@@ -157,7 +157,7 @@ rl.on('line', (line) => {
       redirectOutput.type = "stdout";
       args.splice(outputRedirIndex, 2);
    } else if (errorRedirIndex !== -1) {
-      redirectOutput.file = args[outputRedirIndex + 1];
+      redirectOutput.file = args[errorRedirIndex + 1];
       redirectOutput.type = "stderr";
       args.splice(outputRedirIndex, 2);
    }
