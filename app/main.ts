@@ -14,6 +14,7 @@ type StandardStream = 'stdout' | 'stderr';
 interface RedirectOutput {
    file: string | null;
    type: StandardStream | null;
+   append: boolean;
 }
 
 type CommandHandler = (args: string[], redirect: RedirectOutput) => void;
@@ -68,21 +69,26 @@ function writeError(content: string, redirect: RedirectOutput) {
    writeToStream(content, 'stderr', redirect);
 }
 
+const REDIRECT_RE = /^(>>?|1>>?|2>>?)$/;
+
 function extractRedirection(args: string[]): { cleanArgs: string[], redirect: RedirectOutput } {
-   const redirect: RedirectOutput = { file: null, type: null };
+   const redirect: RedirectOutput = { file: null, type: null, append: false };
    const cleanArgs = [...args];
 
-   const outIndex = cleanArgs.findIndex(arg => arg === '>' || arg === '1>');
-   const errIndex = cleanArgs.findIndex(arg => arg === '2>');
+   const redirectIndex = cleanArgs.findIndex(arg => REDIRECT_RE.test(arg));
 
-   if (outIndex !== -1) {
-      redirect.file = cleanArgs[outIndex + 1];
-      redirect.type = "stdout";
-      cleanArgs.splice(outIndex, 2);
-   } else if (errIndex !== -1) {
-      redirect.file = cleanArgs[errIndex + 1];
-      redirect.type = "stderr";
-      cleanArgs.splice(errIndex, 2);
+   if (redirectIndex !== -1) {
+      const operator = cleanArgs[redirectIndex];
+      redirect.file = cleanArgs[redirectIndex + 1];
+
+      if (operator === '2>' || operator === '2>>') {
+         redirect.type = 'stderr';
+      } else {
+         redirect.type = 'stdout';
+      }
+
+      redirect.append = operator.endsWith('>>');
+      cleanArgs.splice(redirectIndex, 2);
    }
 
    return { cleanArgs, redirect };
@@ -153,7 +159,7 @@ function executeExternalCommand(command: string, args: string[] = [], redirect: 
       const stdio: StdioOptions = ['inherit', 'inherit', 'inherit'];
 
       if (redirect.file) {
-         fd = openSync(redirect.file, 'w');
+         fd = openSync(redirect.file, redirect.append ? 'a' : 'w');
 
          if (redirect.type === "stdout") {
             stdio[1] = fd;
@@ -199,7 +205,7 @@ rl.on('line', (line) => {
    const { cleanArgs: args, redirect } = extractRedirection(rawArgs);
 
    if (command in builtins) {
-      if (redirect.file) createFile(redirect.file);
+      if (redirect.file && !redirect.append) createFile(redirect.file);
       builtins[command](args, redirect);
    } else {
       executeExternalCommand(command, args, redirect);
