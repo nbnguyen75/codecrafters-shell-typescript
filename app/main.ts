@@ -63,7 +63,58 @@ function writeError(content: string, redirect: RedirectOutput) {
    console.error(content);
 }
 
-function executeExternalCommand(command: string, args: string[] = [], redirect: RedirectOutput) {
+// ==========================================
+// 4. COMMAND HANDLERS
+// ==========================================
+
+const builtins: Record<string, CommandHandler> = {
+   exit: () => {
+      rl.close();
+      process.exit(0);
+   },
+   echo: (args, redirectOutput) => {
+      writeOutput(args.join(' '), redirectOutput)
+   },
+   type: (args, redirectOutput) => {
+      const targetCommand = args[0];
+
+      if (!targetCommand) {
+         return;
+      }
+
+      if (targetCommand in builtins) {
+         writeOutput(`${targetCommand} is a shell builtin`, redirectOutput)
+         return;
+      }
+
+      const commandPath = findExternalCommand(targetCommand)
+
+      if (commandPath) {
+         writeOutput(`${targetCommand} is ${commandPath}`, redirectOutput)
+         return;
+      }
+
+      writeError(`${targetCommand}: not found`, redirectOutput)
+   },
+   pwd: (_args, redirect) => {
+      writeOutput(process.cwd(), redirect)
+   },
+   cd: (args, redirect) => {
+      if (args[0] === "~") {
+         process.chdir(homedir())
+         return;
+      }
+
+      if (existsSync(args[0])) {
+         process.chdir(args[0])
+         return;
+      }
+
+      writeError(`cd: ${args[0]}: No such file or directory`, redirect);
+   }
+}
+
+function handleExternalCommand(command: string, args: string[] = [], redirect: RedirectOutput) {
    const exePath = findExternalCommand(command);
 
    if (!exePath) {
@@ -85,78 +136,13 @@ function executeExternalCommand(command: string, args: string[] = [], redirect: 
             stdio[2] = fd
       }
 
-      spawnSync(exePath, args, { stdio });
+      spawnSync(command, args, { stdio });
    } catch (err) {
       const error = err as Error;
-      writeError('The command failed to execute:' + error.message, redirect);
+      console.error('The command failed to execute:', error.message);
    } finally {
       if (fd !== null) {
          closeSync(fd);
-      }
-   }
-}
-
-function extractRedirection(args: string[]) {
-   const redirect: RedirectOutput = { file: null, type: null };
-   const cleanArgs = [...args];
-
-   const outIndex = cleanArgs.findIndex(arg => arg === '>' || arg === '1>');
-   const errIndex = cleanArgs.findIndex(arg => arg === '2>');
-
-   if (outIndex !== -1) {
-      redirect.file = cleanArgs[outIndex + 1];
-      redirect.type = "stdout";
-      cleanArgs.splice(outIndex, 2);
-   } else if (errIndex !== -1) {
-      redirect.file = cleanArgs[errIndex + 1];
-      redirect.type = "stderr";
-      cleanArgs.splice(errIndex, 2);
-   }
-
-   return { cleanArgs, redirect };
-}
-
-// ==========================================
-// 4. COMMAND HANDLERS
-// ==========================================
-
-const builtins: Record<string, CommandHandler> = {
-   exit: () => {
-      rl.close();
-      process.exit(0);
-   },
-   echo: (args, redirect) => {
-      writeOutput(args.join(' '), redirect)
-   },
-   type: (args, redirect) => {
-      const targetCommand = args[0];
-      if (!targetCommand) {
-         return;
-      }
-
-      if (targetCommand in builtins) {
-         writeOutput(`${targetCommand} is a shell builtin`, redirect)
-         return;
-      }
-
-      const commandPath = findExternalCommand(targetCommand)
-      if (commandPath) {
-         writeOutput(`${targetCommand} is ${commandPath}`, redirect)
-         return;
-      }
-
-      writeError(`${targetCommand}: not found`, redirect)
-   },
-   pwd: (_args, redirect) => {
-      writeOutput(process.cwd(), redirect)
-   },
-   cd: (args, redirect) => {
-      const targetPath = args[0] === "~" ? homedir() : args[0];
-
-      try {
-         process.chdir(targetPath);
-      } catch {
-         writeError(`cd: ${targetPath}: No such file or directory`, redirect);
       }
    }
 }
@@ -171,28 +157,40 @@ rl.prompt();
 
 rl.on('line', (line) => {
    const trimmedLine = line.trim();
+
    if (!trimmedLine) {
       rl.prompt();
       return;
    }
 
-   const parsedInput = parse(trimmedLine);
-   if (!parsedInput.length) {
-      rl.prompt();
-      return;
+   const [command, ...args] = parse(trimmedLine);
+
+   const redirectOutput: RedirectOutput = {
+      file: null,
+      type: null
    }
 
-   const [command, ...rawArgs] = parsedInput;
-   const { cleanArgs: args, redirect } = extractRedirection(rawArgs);
+   const outputRedirIndex = args.findIndex(arg => arg === '>' || arg === '1>');
+   const errorRedirIndex = args.findIndex(arg => arg === '2>');
 
-   if (redirect.file) {
-      closeSync(openSync(redirect.file, 'w'));
+   if (outputRedirIndex !== -1) {
+      redirectOutput.file = args[outputRedirIndex + 1];
+      redirectOutput.type = "stdout";
+      args.splice(outputRedirIndex, 2);
+   } else if (errorRedirIndex !== -1) {
+      redirectOutput.file = args[errorRedirIndex + 1];
+      redirectOutput.type = "stderr";
+      args.splice(errorRedirIndex, 2);
+   }
+
+   if (redirectOutput.file) {
+      closeSync(openSync(redirectOutput.file, 'w'));
    }
 
    if (command in builtins) {
-      builtins[command](args, redirect);
+      builtins[command](args, redirectOutput);
    } else {
-      executeExternalCommand(command, args, redirect);
+      handleExternalCommand(command, args, redirectOutput);
    }
 
    rl.prompt();
