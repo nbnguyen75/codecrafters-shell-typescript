@@ -229,7 +229,7 @@ const rl = createInterface({
 
       tabPressedCount = 0;
 
-      process.stdout.write(`\n${matches.join("  ")}\n$ ${firstWord}`);
+      process.stdout.write(`\n${matches.toSorted().join("  ")}\n$ ${firstWord}`);
 
       return [[], firstWord];
    },
