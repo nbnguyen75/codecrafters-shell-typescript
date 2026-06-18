@@ -191,8 +191,9 @@ const rl = createInterface({
       const firstWord = line.trim().split(/\s+/)[0] || "";
       const matches = commandTrie.findWordsWithPrefix(firstWord);
 
-      if (!matches.length)
-         return [['\x07'], firstWord];
+      if (!matches.length) {
+         process.stdout.write('\x07')
+      }
 
       return [matches.map(cmd => cmd + " "), firstWord];
    },
