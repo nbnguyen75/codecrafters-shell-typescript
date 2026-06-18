@@ -46,7 +46,6 @@ function writeOutput(content: string, redirect: RedirectOutput) {
 
    if (stdType === "stdout" && filePath) {
       appendFileSync(filePath, content + '\n')
-      return
    }
 
    console.log(content);
@@ -57,7 +56,6 @@ function writeError(content: string, redirect: RedirectOutput) {
 
    if (stdType === "stderr" && filePath) {
       appendFileSync(filePath, content + '\n')
-      return
    }
 
    console.error(content);
@@ -183,9 +181,9 @@ rl.on('line', (line) => {
       args.splice(errorRedirIndex, 2);
    }
 
-   if (redirectOutput.file) {
-      closeSync(openSync(redirectOutput.file, 'w'));
-   }
+   // if (redirectOutput.file) {
+   //    closeSync(openSync(redirectOutput.file, 'w'));
+   // }
 
    if (command in builtins) {
       builtins[command](args, redirectOutput);
