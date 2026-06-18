@@ -1,6 +1,6 @@
 import path from "node:path";
 import { homedir } from "node:os";
-import { existsSync, constants, accessSync, openSync, appendFileSync } from "node:fs";
+import { existsSync, constants, accessSync, openSync, appendFileSync, closeSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { spawnSync, type StdioOptions } from "node:child_process";
 import { parse } from "./parser.js";
@@ -107,22 +107,28 @@ function handleExternalCommand(command: string, args: string[] = [], redirectOut
       return
    }
 
+   let fd: number | null = null; // Tạo biến để giữ File Descriptor
+
    try {
       const stdio: StdioOptions = ['inherit', 'inherit', 'inherit'];
 
       if (redirectOutput.file) {
-         const found = openSync(redirectOutput.file, 'w')
+         fd = openSync(redirectOutput.file, 'w')
 
          if (redirectOutput.type === "stdout")
-            stdio[1] = found;
+            stdio[1] = fd;
          else if (redirectOutput.type === "stderr")
-            stdio[2] = found
+            stdio[2] = fd
       }
 
       spawnSync(command, args, { stdio });
    } catch (err) {
       const error = err as Error;
       console.error('The command failed to execute:', error.message);
+   } finally {
+      if (fd !== null) {
+         closeSync(fd);
+      }
    }
 }
 
