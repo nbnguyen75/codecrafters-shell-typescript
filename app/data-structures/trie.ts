@@ -15,7 +15,7 @@ export class Trie {
       this.root = new TrieNode();
    }
 
-   insert(word: string) {
+   private _insert(word: string) {
       let current: TrieNode | undefined = this.root;
 
       for (const char of word) {
@@ -28,6 +28,12 @@ export class Trie {
 
       if (current) {
          current.isEndOfWord = true;
+      }
+   }
+
+   insert(...words: string[]) {
+      for (const word of words) {
+         this._insert(word);
       }
    }
 
@@ -55,5 +61,19 @@ export class Trie {
       this.collectWords(current!, prefix, results);
 
       return results;
+   }
+
+   startsWith(prefix: string): boolean {
+      let current: TrieNode | undefined = this.root
+
+      for (const char of prefix) {
+         if (!current?.children.has(char)) {
+            return false
+         }
+
+         current = current.children.get(char)
+      }
+
+      return true;
    }
 }

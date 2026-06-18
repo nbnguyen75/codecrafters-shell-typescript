@@ -1,6 +1,6 @@
 import path from "node:path";
 import { homedir } from "node:os";
-import { existsSync, constants, accessSync, openSync, appendFileSync, closeSync } from "node:fs";
+import { existsSync, constants, accessSync, openSync, appendFileSync, closeSync, readdirSync } from "node:fs";
 import { createInterface } from "node:readline";
 import { spawnSync, type StdioOptions } from "node:child_process";
 import { parse } from "./parser.js";
@@ -29,6 +29,19 @@ const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter);
 // ==========================================
 // 3. UTILITY FUNCTIONS
 // ==========================================
+
+function scanPathCommands(trie: Trie) {
+   for (const dir of PATH_DIRECTORIES) {
+      try {
+         for (const entry of readdirSync(dir)) {
+            try {
+               accessSync(path.join(dir, entry), constants.X_OK);
+               trie.insert(entry);
+            } catch { }
+         }
+      } catch { }
+   }
+}
 
 function findExternalCommand(command: string) {
    for (const dir of PATH_DIRECTORIES) {
@@ -179,9 +192,11 @@ function executeExternalCommand(command: string, args: string[] = [], redirect: 
    }
 }
 
+const builtinCommands = Object.keys(builtins);
 const commandTrie = new Trie();
-commandTrie.insert("echo");
-commandTrie.insert("exit");
+
+commandTrie.insert(...builtinCommands);
+scanPathCommands(commandTrie);
 
 const rl = createInterface({
    input: process.stdin,
