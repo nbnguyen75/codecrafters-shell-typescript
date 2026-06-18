@@ -24,6 +24,8 @@ type CommandHandler = (args: string[], redirect: RedirectOutput) => void;
 // 2. CONFIGURATION & ENVIRONMENT
 // ==========================================
 
+const BELL_RING = '\x07'
+
 const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter);
 
 // ==========================================
@@ -198,6 +200,8 @@ const commandTrie = new Trie();
 commandTrie.insert(...builtinCommands);
 scanPathCommands(commandTrie);
 
+let tabPressedCount = 0;
+
 const rl = createInterface({
    input: process.stdin,
    output: process.stdout,
@@ -207,10 +211,27 @@ const rl = createInterface({
       const matches = commandTrie.findWordsWithPrefix(firstWord);
 
       if (!matches.length) {
-         process.stdout.write('\x07')
+         tabPressedCount = 0;
+         process.stdout.write(BELL_RING)
+         return [[], firstWord];
       }
 
-      return [matches.map(cmd => cmd + " "), firstWord];
+      if (matches.length === 1) {
+         tabPressedCount = 0;
+         return [matches.map(cmd => cmd + " "), firstWord]
+      }
+
+      if (!tabPressedCount) {
+         tabPressedCount++;
+         process.stdout.write(BELL_RING);
+         return [[], firstWord];
+      }
+
+      tabPressedCount = 0;
+
+      process.stdout.write(`\n${matches.join("  ")}\n$ ${firstWord}`);
+
+      return [[], firstWord];
    },
 });
 
