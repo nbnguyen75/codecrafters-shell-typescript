@@ -5,6 +5,11 @@ import { createInterface } from "node:readline";
 import { spawnSync, type StdioOptions } from "node:child_process";
 import { parse } from "./parser.js";
 
+interface RedirectOutput {
+   file: string | null,
+   type: 'stdout' | 'stderr' | null
+}
+
 const PATH_DIRECTORIES = (process.env.PATH || "").split(path.delimiter)
 
 function findExternalCommand(command: string) {
@@ -15,34 +20,47 @@ function findExternalCommand(command: string) {
       try {
          accessSync(fullPath, constants.X_OK);
          return fullPath;
-      } catch {
-         continue;
-      }
+      } catch { }
    }
 
    return null;
 }
 
-function writeOutput(content: string, filePath: string | null = null) {
+function writeOutput(content: string, redirectOutput: RedirectOutput) {
+   const { file: filePath, type: stdType } = redirectOutput;
+
    if (!filePath) {
       console.log(content);
       return
    }
 
-   appendFileSync(filePath, content + '\n')
+   if (stdType === "stdout")
+      appendFileSync(filePath, content + '\n')
 }
 
-type CommandHandler = (args: string[], outputRedir?: string | null) => void;
+function writeError(content: string, redirectOutput: RedirectOutput) {
+   const { file: filePath, type: stdType } = redirectOutput;
+
+   if (!filePath) {
+      console.error(content);
+      return
+   }
+
+   if (stdType === "stderr")
+      appendFileSync(filePath, content + '\n')
+}
+
+type CommandHandler = (args: string[], redirectOutput: RedirectOutput) => void;
 
 const builtins: Record<string, CommandHandler> = {
    exit: () => {
       rl.close();
       process.exit(0);
    },
-   echo: (args, outputRedir) => {
-      writeOutput(args.join(' '), outputRedir)
+   echo: (args, redirectOutput) => {
+      writeOutput(args.join(' '), redirectOutput)
    },
-   type: (args, outputRedir) => {
+   type: (args, redirectOutput) => {
       const targetCommand = args[0];
 
       if (!targetCommand) {
@@ -50,23 +68,23 @@ const builtins: Record<string, CommandHandler> = {
       }
 
       if (targetCommand in builtins) {
-         writeOutput(`${targetCommand} is a shell builtin`, outputRedir)
+         writeOutput(`${targetCommand} is a shell builtin`, redirectOutput)
          return;
       }
 
       const commandPath = findExternalCommand(targetCommand)
 
       if (commandPath) {
-         writeOutput(`${targetCommand} is ${commandPath}`, outputRedir)
+         writeOutput(`${targetCommand} is ${commandPath}`, redirectOutput)
          return;
       }
 
-      console.error(`${targetCommand}: not found`);
+      writeError(`${targetCommand}: not found`, redirectOutput)
    },
-   pwd: () => {
-      writeOutput(process.cwd())
+   pwd: (_args, redirectOutput) => {
+      writeOutput(process.cwd(), redirectOutput)
    },
-   cd: (args, outputRedir) => {
+   cd: (args, redirectOutput) => {
       if (args[0] === "~") {
          process.chdir(homedir())
          return;
@@ -77,24 +95,28 @@ const builtins: Record<string, CommandHandler> = {
          return;
       }
 
-      console.error(`cd: ${args[0]}: No such file or directory`)
+      writeError(`cd: ${args[0]}: No such file or directory`, redirectOutput);
    }
 }
 
-function handleExternalCommand(command: string, args: string[] = [], outputRedir: string | null = null) {
+function handleExternalCommand(command: string, args: string[] = [], redirectOutput: RedirectOutput) {
    const exePath = findExternalCommand(command);
 
    if (!exePath) {
-      console.error(`${command}: command not found`);
+      writeError(`${command}: command not found`, redirectOutput);
       return
    }
 
    try {
       const stdio: StdioOptions = ['inherit', 'inherit', 'inherit'];
 
-      if (outputRedir) {
-         const found = openSync(outputRedir, 'w')
-         stdio[1] = found
+      if (redirectOutput.file) {
+         const found = openSync(redirectOutput.file, 'w')
+
+         if (redirectOutput.type === "stdout")
+            stdio[1] = found;
+         else if (redirectOutput.type === "stderr")
+            stdio[2] = found
       }
 
       spawnSync(command, args, { stdio });
@@ -122,18 +144,26 @@ rl.on('line', (line) => {
 
    const [command, ...args] = parse(trimmedLine);
 
-   const redirIndex = args.findIndex(arg => arg === '>' || arg === '1>');
-   let outputRedir: string | null = null;
+   const redirectOutput: RedirectOutput = {
+      file: null,
+      type: null
+   }
 
-   if (redirIndex !== -1) {
-      outputRedir = args[redirIndex + 1];
-      args.splice(redirIndex, 2);
+   const outputRedirIndex = args.findIndex(arg => arg === '>' || arg === '1>');
+   const errorRedirIndex = args.findIndex(arg => arg === '2>');
+
+   if (outputRedirIndex !== -1) {
+      redirectOutput.file = args[outputRedirIndex + 1];
+      args.splice(outputRedirIndex, 2);
+   } else if (errorRedirIndex !== -1) {
+      redirectOutput.file = args[outputRedirIndex + 1];
+      args.splice(outputRedirIndex, 2);
    }
 
    if (command in builtins) {
-      builtins[command](args, outputRedir);
+      builtins[command](args, redirectOutput);
    } else {
-      handleExternalCommand(command, args, outputRedir);
+      handleExternalCommand(command, args, redirectOutput);
    }
 
    rl.prompt();
