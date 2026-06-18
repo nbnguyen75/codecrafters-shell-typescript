@@ -4,6 +4,7 @@ import { existsSync, constants, accessSync, openSync, appendFileSync, closeSync 
 import { createInterface } from "node:readline";
 import { spawnSync, type StdioOptions } from "node:child_process";
 import { parse } from "./parser.js";
+import { Trie } from "./data-structures/trie.js";
 
 // ==========================================
 // 1. TYPES & INTERFACES
@@ -178,10 +179,19 @@ function executeExternalCommand(command: string, args: string[] = [], redirect: 
    }
 }
 
+const commandTrie = new Trie();
+commandTrie.insert("echo");
+commandTrie.insert("exit");
+
 const rl = createInterface({
    input: process.stdin,
    output: process.stdout,
    prompt: "$ ",
+   completer: (line: string): [string[], string] => {
+      const firstWord = line.trim().split(/\s+/)[0] || "";
+      const matches = commandTrie.findWordsWithPrefix(firstWord);
+      return [matches.map(cmd => cmd + " "), firstWord];
+   },
 });
 
 rl.prompt();
