@@ -206,7 +206,7 @@ const rl = createInterface({
    input: process.stdin,
    output: process.stdout,
    prompt: "$ ",
-   completer: (line: string): [string[], string] => {
+   completer: (line: string) => {
       const firstWord = line.trim().split(/\s+/)[0] || "";
 
       if (!tabState || !firstWord.startsWith(tabState.prefix)) {
@@ -228,7 +228,8 @@ const rl = createInterface({
 
       tabState.index = (tabState.index + 1) % tabState.matches.length;
       const match = tabState.matches[tabState.index];
-      return [[match], firstWord];
+      // process.stdout.write(`\n${matches.toSorted().join("  ")}\n$ ${firstWord}`);
+      return [[match + (tabState.matches.length > 1 ? " " : "")], firstWord];
    },
 });
 
