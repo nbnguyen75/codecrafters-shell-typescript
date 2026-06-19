@@ -228,7 +228,7 @@ const rl = createInterface({
 
       tabState.index = (tabState.index + 1) % tabState.matches.length;
       const match = tabState.matches[tabState.index];
-      return [[match + " "], firstWord];
+      return [[match], firstWord];
    },
 });
 
