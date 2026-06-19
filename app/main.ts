@@ -223,7 +223,7 @@ const rl = createInterface({
          }
 
          tabState = { prefix: firstWord, matches, index: 0 };
-         return [[matches[0] + " "], firstWord];
+         return [[matches[0]], firstWord];
       }
 
       tabState.index = (tabState.index + 1) % tabState.matches.length;
