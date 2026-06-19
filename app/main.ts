@@ -200,7 +200,7 @@ const commandTrie = new Trie();
 commandTrie.insert(...builtinCommands);
 scanPathCommands(commandTrie);
 
-let tabState: { prefix: string; matches: string[]; index: number } | null = null;
+let tabPressedCount = 0;
 
 const rl = createInterface({
    input: process.stdin,
@@ -208,29 +208,35 @@ const rl = createInterface({
    prompt: "$ ",
    completer: (line: string) => {
       const firstWord = line.trim().split(/\s+/)[0] || "";
+      const matches = commandTrie.findWordsWithPrefix(firstWord);
 
-      if (!tabState || !firstWord.startsWith(tabState.prefix)) {
-         tabState = null;
-         const matches = commandTrie.findWordsWithPrefix(firstWord);
-
-         if (!matches.length) {
-            process.stdout.write(BELL_RING);
-            return [[], firstWord];
-         }
-
-         if (matches.length === 1) {
-            return [[matches[0] + " "], firstWord];
-         }
-
-         tabState = { prefix: firstWord, matches, index: 0 };
-         return [[matches[0]], firstWord];
+      if (!matches.length) {
+         tabPressedCount = 0;
+         process.stdout.write(BELL_RING);
+         return [[], firstWord];
       }
 
-      tabState.index = (tabState.index + 1) % tabState.matches.length;
-      const match = tabState.matches[tabState.index];
-      // console.log(tabState.index, tabState.matches.length)
-      // process.stdout.write(`\n${matches.toSorted().join("  ")}\n$ ${firstWord}`);
-      return [[match + (tabState.index >= tabState.matches.length - 1 ? " " : "")], firstWord];
+      if (matches.length === 1) {
+         tabPressedCount = 0;
+         return [[matches[0] + " "], firstWord];
+      }
+
+      const lcp = commandTrie.findCommonPrefix(firstWord);
+
+      if (lcp.length > firstWord.length) {
+         tabPressedCount = 0;
+         return [[lcp], firstWord];
+      }
+
+      if (!tabPressedCount) {
+         tabPressedCount++;
+         process.stdout.write(BELL_RING);
+         return [[], firstWord];
+      }
+
+      tabPressedCount = 0;
+      process.stdout.write(`\n${matches.toSorted().join("  ")}\n$ ${firstWord}`);
+      return [[], firstWord];
    },
 });
 

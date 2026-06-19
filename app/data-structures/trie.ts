@@ -63,6 +63,22 @@ export class Trie {
       return results;
    }
 
+   findCommonPrefix(prefix: string): string {
+      const words = this.findWordsWithPrefix(prefix);
+      if (words.length === 0) return prefix;
+
+      let lcp = words[0];
+      for (let i = 1; i < words.length; i++) {
+         let j = 0;
+         while (j < lcp.length && j < words[i].length && lcp[j] === words[i][j]) {
+            j++;
+         }
+         lcp = lcp.slice(0, j);
+      }
+
+      return lcp;
+   }
+
    startsWith(prefix: string): boolean {
       let current: TrieNode | undefined = this.root
 
