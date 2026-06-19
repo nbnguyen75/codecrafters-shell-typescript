@@ -200,7 +200,7 @@ const commandTrie = new Trie();
 commandTrie.insert(...builtinCommands);
 scanPathCommands(commandTrie);
 
-let tabPressedCount = 0;
+let tabState: { prefix: string; matches: string[]; index: number } | null = null;
 
 const rl = createInterface({
    input: process.stdin,
@@ -208,30 +208,27 @@ const rl = createInterface({
    prompt: "$ ",
    completer: (line: string): [string[], string] => {
       const firstWord = line.trim().split(/\s+/)[0] || "";
-      const matches = commandTrie.findWordsWithPrefix(firstWord);
 
-      if (!matches.length) {
-         tabPressedCount = 0;
-         process.stdout.write(BELL_RING)
-         return [[], firstWord];
+      if (!tabState || !firstWord.startsWith(tabState.prefix)) {
+         tabState = null;
+         const matches = commandTrie.findWordsWithPrefix(firstWord);
+
+         if (!matches.length) {
+            process.stdout.write(BELL_RING);
+            return [[], firstWord];
+         }
+
+         if (matches.length === 1) {
+            return [[matches[0] + " "], firstWord];
+         }
+
+         tabState = { prefix: firstWord, matches, index: 0 };
+         return [[matches[0] + " "], firstWord];
       }
 
-      if (matches.length === 1) {
-         tabPressedCount = 0;
-         return [matches.map(cmd => cmd + " "), firstWord]
-      }
-
-      if (!tabPressedCount) {
-         tabPressedCount++;
-         process.stdout.write(BELL_RING);
-         return [[], firstWord];
-      }
-
-      tabPressedCount = 0;
-
-      process.stdout.write(`\n${matches.toSorted().join("  ")}\n$ ${firstWord}`);
-
-      return [[], firstWord];
+      tabState.index = (tabState.index + 1) % tabState.matches.length;
+      const match = tabState.matches[tabState.index];
+      return [[match + " "], firstWord];
    },
 });
 
