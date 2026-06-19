@@ -229,8 +229,7 @@ const rl = createInterface({
       tabState.index = (tabState.index + 1) % tabState.matches.length;
       const match = tabState.matches[tabState.index];
       // process.stdout.write(`\n${matches.toSorted().join("  ")}\n$ ${firstWord}`);
-      console.log(tabState.matches.length)
-      return [[match + (tabState.matches.length > 0 ? " " : "")], firstWord];
+      return [[match + (tabState.index !== tabState.matches.length - 1 ? " " : "")], firstWord];
    },
 });
 
